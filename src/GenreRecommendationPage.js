@@ -102,25 +102,56 @@ const GenreRecommendationPage = ({ apiUrl }) => {
     setReadyCards([]);
     
     try {
+      console.log('Fetching from:', `${apiUrl}/recommend/genre`);
+      console.log('Request body:', { genres, type_anime: typeAnime, top_n: topN });
+      
       const response = await fetch(`${apiUrl}/recommend/genre`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ genres, type_anime: typeAnime, top_n: topN }),
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ genres, type_anime: typeAnime, top_n: topN })
       });
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
+      
       const data = await response.json();
-      if (data.popular && data.relevant) {
-        setRecommendations(data);
-        const allRecs = [...data.popular, ...data.relevant];
+      console.log('Raw API Response:', data); // Log the raw response
+      
+      // Handle different response formats
+      let processedData = {
+        popular: [],
+        relevant: []
+      };
+
+      if (Array.isArray(data)) {
+        // If response is an array, treat it as relevant recommendations
+        processedData.relevant = data;
+      } else if (typeof data === 'object') {
+        // If response is an object, try to extract popular and relevant
+        processedData = {
+          popular: Array.isArray(data.popular) ? data.popular : [],
+          relevant: Array.isArray(data.relevant) ? data.relevant : []
+        };
+      }
+
+      console.log('Processed recommendations:', processedData);
+      
+      if (processedData.popular.length > 0 || processedData.relevant.length > 0) {
+        setRecommendations(processedData);
+        const allRecs = [...processedData.popular, ...processedData.relevant];
         // Don't set loading to false yet, wait for first batch of images
         await fetchImages(allRecs);
       } else {
-        setError('No recommendations found');
+        setError('No recommendations found for these genres');
         setLoading(false);
       }
     } catch (error) {
+      console.error('Fetch error:', error); // Add detailed error logging
       setError('Error fetching recommendations: ' + error.message);
       setLoading(false);
     }
@@ -283,7 +314,7 @@ const GenreRecommendationPage = ({ apiUrl }) => {
               value={topN}
               onChange={(e) => setTopN(Math.max(1, Math.min(20, parseInt(e.target.value))))}
               min="1"
-              max="100"
+              max="20"
               className="input-field"
               disabled={loading}
             />

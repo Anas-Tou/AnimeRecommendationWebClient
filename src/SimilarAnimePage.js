@@ -6,49 +6,61 @@ const BATCH_SIZE = 3; // Number of parallel requests
 const RATE_LIMIT_DELAY = 250; // 250ms between requests
 
 const LoadingSpinner = () => (
-  <div className="flex flex-col items-center justify-center min-h-[100px]">
-    <AiOutlineLoading3Quarters className="w-4 h-4 mb-2 text-blue-500 loading-spinner" />
-    <div className="text-sm font-medium text-gray-700 animate-pulse">Finding similar anime...</div>
-    <div className="text-xs text-gray-500 mt-1">This may take a few moments</div>
+  <div className="flex flex-col items-center justify-center py-12">
+    <div className="relative">
+      <div className="w-12 h-12 border-4 border-blue-200 rounded-full"></div>
+      <div className="w-12 h-12 border-4 border-blue-600 rounded-full border-t-transparent animate-spin absolute top-0 left-0"></div>
+    </div>
+    <div className="mt-4 text-center">
+      <div className="text-lg font-medium text-gray-900">Finding similar anime...</div>
+      <div className="text-sm text-gray-500 mt-1">This may take a few moments</div>
+    </div>
   </div>
 );
 
 const LoadingCard = () => (
-  <div className="anime-card animate-pulse">
-    <div className="aspect-w-2 bg-gray-200"></div>
+  <div className="bg-white rounded-xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+    <div className="aspect-w-2 bg-gray-200 animate-pulse"></div>
     <div className="p-4 space-y-3">
-      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+      <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
       <div className="flex flex-wrap gap-1">
-        <div className="h-6 bg-gray-200 rounded w-16"></div>
-        <div className="h-6 bg-gray-200 rounded w-20"></div>
+        <div className="h-6 bg-gray-200 rounded animate-pulse w-16"></div>
+        <div className="h-6 bg-gray-200 rounded animate-pulse w-20"></div>
       </div>
-      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+      <div className="h-4 bg-gray-200 rounded animate-pulse w-1/4"></div>
     </div>
   </div>
 );
 
 const AnimeCard = ({ rec, imageUrl }) => (
-  <div className="anime-card">
-    <div className="aspect-w-2">
+  <div className="bg-white rounded-xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+    <div className="relative aspect-w-2">
       <img
         src={imageUrl}
         alt={`${rec.name} poster`}
-        className="w-full h-full object-cover"
+        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
       />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
     </div>
-    <div className="p-4">
-      <h4 className="font-medium text-gray-900 hover:text-blue-600 cursor-pointer line-clamp-2 mb-2">
+    <div className="p-4 space-y-3">
+      <h4 className="font-semibold text-lg text-gray-900 hover:text-blue-600 line-clamp-2 mb-2 transition-colors duration-200">
         {rec.name}
       </h4>
-      <div className="flex flex-wrap gap-1 mb-2">
+      <div className="flex flex-wrap gap-1.5 mb-3">
         {rec.genre?.split(',').map((genre, i) => (
-          <span key={i} className="genre-tag">
+          <span 
+            key={i} 
+            className="px-2.5 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors duration-200"
+          >
             {genre.trim()}
           </span>
         ))}
       </div>
-      <div className="text-sm font-medium text-gray-900">
-        Score: {rec.rating || 'N/A'}
+      <div className="flex items-center space-x-2">
+        <span className="text-yellow-400">★</span>
+        <span className="text-sm font-semibold text-gray-700">
+          {rec.rating?.toFixed(2) || 'N/A'}
+        </span>
       </div>
     </div>
   </div>
@@ -179,22 +191,40 @@ const SimilarAnimePage = ({ apiUrl }) => {
     setReadyCards([]);
     
     try {
+      console.log('Fetching recommendations for:', animeName);
+      
       const response = await fetch(
-        `${apiUrl}/recommend_similar_anime/?anime_name=${encodeURIComponent(animeName)}&top_n=${topN}&rating_threshold=${ratingThreshold}`
+        `${apiUrl}/recommend_similar_anime/?anime_name=${encodeURIComponent(animeName)}&top_n=${topN}&rating_threshold=${ratingThreshold}`,
+        {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
+        }
       );
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
+      
       const data = await response.json();
-      if (data.recommendations && data.recommendations.length > 0) {
+      console.log('API Response:', data);
+      
+      // Check if data has recommendations array
+      if (data.recommendations && Array.isArray(data.recommendations) && data.recommendations.length > 0) {
         setRecommendations(data.recommendations);
-        // Don't set loading to false yet, wait for first batch of images
         await fetchImages(data.recommendations);
+      } else if (data.message) {
+        // API returned a message indicating no recommendations
+        setError(data.message);
+        setLoading(false);
       } else {
-        setError(data.message || 'No recommendations found');
+        setError('No recommendations found for this anime');
         setLoading(false);
       }
     } catch (error) {
+      console.error('Fetch error:', error);
       setError('Error fetching recommendations: ' + error.message);
       setLoading(false);
     }
@@ -235,80 +265,105 @@ const SimilarAnimePage = ({ apiUrl }) => {
   };
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6 text-gray-900">Find Similar Anime</h2>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <h2 className="text-3xl font-bold text-gray-900 mb-8">Find Similar Anime</h2>
       
-      <div className="max-w-2xl space-y-4 mb-8">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Enter an anime title
-          </label>
-          <input
-            type="text"
-            value={animeName}
-            onChange={(e) => setAnimeName(e.target.value)}
-            placeholder="e.g. Naruto"
-            className="input-field"
-            disabled={loading}
-          />
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="max-w-2xl space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Number of Results
+              Enter an anime title
             </label>
             <input
-              type="number"
-              value={topN}
-              onChange={(e) => setTopN(Math.max(1, Math.min(100 , parseInt(e.target.value))))}
-              min="1"
-              max="100"
-              className="input-field"
+              type="text"
+              value={animeName}
+              onChange={(e) => setAnimeName(e.target.value)}
+              placeholder="e.g. Naruto"
+              className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
               disabled={loading}
             />
           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Minimum Rating
-            </label>
-            <input
-              type="number"
-              value={ratingThreshold}
-              onChange={(e) => setRatingThreshold(Math.max(0, Math.min(10, parseFloat(e.target.value))))}
-              min="0"
-              max="10"
-              step="0.1"
-              className="input-field"
-              disabled={loading}
-            />
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Number of Results
+              </label>
+              <input
+                type="number"
+                value={topN}
+                onChange={(e) => setTopN(Math.max(1, Math.min(20, parseInt(e.target.value))))}
+                min="1"
+                max="100"
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
+                disabled={loading}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Minimum Rating
+              </label>
+              <input
+                type="number"
+                value={ratingThreshold}
+                onChange={(e) => setRatingThreshold(Math.max(0, Math.min(10, parseFloat(e.target.value))))}
+                min="0"
+                max="10"
+                step="0.1"
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
+                disabled={loading}
+              />
+            </div>
           </div>
-        </div>
 
-        <div>
-          <button
-            onClick={fetchRecommendations}
-            disabled={loading || !animeName.trim()}
-            className={`submit-button ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            {loading ? 'Searching...' : 'Find Similar Anime'}
-          </button>
+          <div>
+            <button
+              onClick={fetchRecommendations}
+              disabled={loading || !animeName.trim()}
+              className={`w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-medium rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 ${
+                loading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Searching...
+                </span>
+              ) : (
+                'Find Similar Anime'
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
       {error && (
-        <div className="error-message">{error}</div>
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-8 rounded-lg">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
       )}
 
       {loading && <LoadingSpinner />}
 
       {!loading && recommendations.length > 0 && (
         <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">
+          <h3 className="text-2xl font-semibold text-gray-900 mb-6">
             Similar to "{animeName}"
           </h3>
-          <div className="anime-grid">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
             {recommendations.map((rec, index) => {
               const readyCard = readyCards.find(card => card.rec.name === rec.name);
               return readyCard ? (
@@ -322,8 +377,17 @@ const SimilarAnimePage = ({ apiUrl }) => {
       )}
 
       {!loading && !error && recommendations.length === 0 && (
-        <div className="info-message">
-          Enter an anime title to find similar recommendations.
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-blue-700">Enter an anime title to find similar recommendations.</p>
+            </div>
+          </div>
         </div>
       )}
     </div>
