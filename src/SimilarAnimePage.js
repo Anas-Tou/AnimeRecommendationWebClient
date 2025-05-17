@@ -315,7 +315,7 @@ const SimilarAnimePage = ({ apiUrl }) => {
               <input
                 type="number"
                 value={topN}
-                onChange={(e) => setTopN(Math.max(1, Math.min(20, parseInt(e.target.value))))}
+                onChange={(e) => setTopN(Math.max(1, Math.min(200, parseInt(e.target.value))))}
                 min="1"
                 max="100"
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"

@@ -96,17 +96,21 @@ const GenreRecommendationPage = ({ apiUrl }) => {
   const [readyCards, setReadyCards] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [selectedType, setSelectedType] = useState('ALL');
 
   // Available genres list
   const availableGenres = [
     'Action', 'Adventure', 'Cars', 'Comedy', 'Dementia', 'Demons', 'Drama',
     'Ecchi', 'Fantasy', 'Game', 'Harem', 'Hentai', 'Historical', 'Horror',
     'Josei', 'Kids', 'Magic', 'Martial Arts', 'Mecha', 'Military', 'Music',
-    'Mystery', 'Parody', 'Police', 'Psychological', 'Romance', 'Samurai',
-    'School', 'Sci-Fi', 'Seinen', 'Shoujo', 'Shoujo Ai', 'Shounen',
-    'Shounen Ai', 'Slice of Life', 'Space', 'Sports', 'Super Power',
-    'Supernatural', 'Thriller', 'Vampire', 'Yaoi', 'Yuri'
+    'Mystery', 'Parody','Psychological', 'Romance',
+    'School', 'Sci-Fi', 'Seinen', 'Shoujo', 'Shounen' 
+    , 'Slice of Life', 'Space', 'Sports', 'Super Power',
+     'Thriller', 'Yaoi'
   ];
+
+  // Available types list
+  const availableTypes = ['ALL', 'Movie', 'Music', 'ONA', 'OVA', 'Special', 'TV'];
 
   // Load cached images on component mount
   useEffect(() => {
@@ -245,7 +249,7 @@ const GenreRecommendationPage = ({ apiUrl }) => {
           },
           body: JSON.stringify({
             genres: selectedGenres,
-            type_anime: "all",
+            type_anime: selectedType.toLowerCase(),
             top_n: topN
           })
         }
@@ -346,6 +350,28 @@ const GenreRecommendationPage = ({ apiUrl }) => {
               ))}
             </div>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Type
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {availableTypes.map(type => (
+                <button
+                  key={type}
+                  onClick={() => setSelectedType(type)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
+                    selectedType === type
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                  disabled={loading}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
           
           <div className="grid grid-cols-2 gap-6">
             <div>
@@ -355,9 +381,9 @@ const GenreRecommendationPage = ({ apiUrl }) => {
               <input
                 type="number"
                 value={topN}
-                onChange={(e) => setTopN(Math.max(1, Math.min(20, parseInt(e.target.value))))}
+                onChange={(e) => setTopN(Math.max(1, Math.min(200, parseInt(e.target.value))))}
                 min="1"
-                max="20"
+                max="200"
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
                 disabled={loading}
               />
