@@ -1,68 +1,112 @@
 import React, { useState, useEffect } from 'react';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 const BATCH_SIZE = 3; // Number of parallel requests
 const RATE_LIMIT_DELAY = 250; // 250ms between requests
 
 const LoadingSpinner = () => (
-  <div className="flex flex-col items-center justify-center min-h-[100px]">
-    <AiOutlineLoading3Quarters className="w-4 h-4 mb-2 text-blue-500 loading-spinner" />
-    <div className="text-sm font-medium text-gray-700 animate-pulse">Finding anime recommendations...</div>
-    <div className="text-xs text-gray-500 mt-1">This may take a few moments</div>
+  <div className="flex flex-col items-center justify-center py-12">
+    <div className="relative">
+      <div className="w-12 h-12 border-4 border-blue-200 rounded-full"></div>
+      <div className="w-12 h-12 border-4 border-blue-600 rounded-full border-t-transparent animate-spin absolute top-0 left-0"></div>
+    </div>
+    <div className="mt-4 text-center">
+      <div className="text-lg font-medium text-gray-900">Finding anime recommendations...</div>
+      <div className="text-sm text-gray-500 mt-1">This may take a few moments</div>
+    </div>
   </div>
 );
 
 const LoadingCard = () => (
-  <div className="anime-card animate-pulse">
-    <div className="aspect-w-2 bg-gray-200"></div>
+  <div className="bg-white rounded-xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+    <div className="aspect-w-2 bg-gray-200 animate-pulse"></div>
     <div className="p-4 space-y-3">
-      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+      <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
       <div className="flex flex-wrap gap-1">
-        <div className="h-6 bg-gray-200 rounded w-16"></div>
-        <div className="h-6 bg-gray-200 rounded w-20"></div>
+        <div className="h-6 bg-gray-200 rounded animate-pulse w-16"></div>
+        <div className="h-6 bg-gray-200 rounded animate-pulse w-20"></div>
       </div>
-      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+      <div className="h-4 bg-gray-200 rounded animate-pulse w-1/4"></div>
     </div>
   </div>
 );
 
-const AnimeCard = ({ rec, imageUrl }) => (
-  <div className="anime-card">
-    <div className="aspect-w-2">
-      <img
-        src={imageUrl}
-        alt={`${rec.name} poster`}
-        className="w-full h-full object-cover"
-      />
-    </div>
-    <div className="p-4">
-      <h4 className="font-medium text-gray-900 hover:text-blue-600 cursor-pointer line-clamp-2 mb-2">
-        {rec.name}
-      </h4>
-      <div className="flex flex-wrap gap-1 mb-2">
-        {rec.genre?.split(',').map((g, i) => (
-          <span key={i} className="genre-tag">
-            {g.trim()}
-          </span>
-        ))}
+const AnimeCard = ({ rec, imageUrl }) => {
+  const handleClick = () => {
+    // Create Google search URL with the anime name
+    const searchQuery = encodeURIComponent(`${rec.name} anime`);
+    const googleUrl = `https://www.google.com/search?q=${searchQuery}`;
+    // Open in new tab
+    window.open(googleUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <div 
+      className="bg-white rounded-xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer" 
+      onClick={handleClick}
+      title={`Search for ${rec.name} on Google`}
+    >
+      <div className="relative aspect-w-2">
+        <img
+          src={imageUrl}
+          alt={`${rec.name} poster`}
+          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
       </div>
-      <div className="text-sm font-medium text-gray-900">
-        Score: {rec.rating || 'N/A'}
+      <div className="p-4 space-y-3">
+        <h4 className="font-semibold text-lg text-gray-900 hover:text-blue-600 line-clamp-2 mb-2 transition-colors duration-200">
+          {rec.name}
+        </h4>
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {rec.genre?.split(',').map((genre, i) => (
+            <span 
+              key={i} 
+              className="px-2.5 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors duration-200"
+              onClick={(e) => e.stopPropagation()} // Prevent triggering parent's onClick
+            >
+              {genre.trim()}
+            </span>
+          ))}
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span className="text-yellow-400">★</span>
+            <span className="text-sm font-semibold text-gray-700">
+              {rec.rating?.toFixed(2) || 'N/A'}
+            </span>
+          </div>
+          <div className="text-xs text-blue-600 flex items-center space-x-1">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            <span>Search on Google</span>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const GenreRecommendationPage = ({ apiUrl }) => {
-  const [genres, setGenres] = useState(['Action']);
-  const [typeAnime, setTypeAnime] = useState('all');
+  const [selectedGenres, setSelectedGenres] = useState([]);
   const [topN, setTopN] = useState(5);
-  const [recommendations, setRecommendations] = useState({ popular: [], relevant: [] });
+  const [ratingThreshold, setRatingThreshold] = useState(6.0);
+  const [recommendations, setRecommendations] = useState([]);
   const [readyCards, setReadyCards] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [imageErrors, setImageErrors] = useState({});
+
+  // Available genres list
+  const availableGenres = [
+    'Action', 'Adventure', 'Cars', 'Comedy', 'Dementia', 'Demons', 'Drama',
+    'Ecchi', 'Fantasy', 'Game', 'Harem', 'Hentai', 'Historical', 'Horror',
+    'Josei', 'Kids', 'Magic', 'Martial Arts', 'Mecha', 'Military', 'Music',
+    'Mystery', 'Parody', 'Police', 'Psychological', 'Romance', 'Samurai',
+    'School', 'Sci-Fi', 'Seinen', 'Shoujo', 'Shoujo Ai', 'Shounen',
+    'Shounen Ai', 'Slice of Life', 'Space', 'Sports', 'Super Power',
+    'Supernatural', 'Thriller', 'Vampire', 'Yaoi', 'Yuri'
+  ];
 
   // Load cached images on component mount
   useEffect(() => {
@@ -71,7 +115,7 @@ const GenreRecommendationPage = ({ apiUrl }) => {
       if (cachedData) {
         const { images: cachedImages, timestamp } = JSON.parse(cachedData);
         if (Date.now() - timestamp < CACHE_EXPIRY) {
-          setReadyCards(Object.entries(cachedImages).map(([name, url]) => ({ rec: { name }, imageUrl: url })));
+          setReadyCards(Object.entries(cachedImages).map(([name, url]) => ({ name, url })));
         } else {
           localStorage.removeItem('animeImageCache');
         }
@@ -86,7 +130,7 @@ const GenreRecommendationPage = ({ apiUrl }) => {
     if (Object.keys(readyCards).length > 0) {
       try {
         localStorage.setItem('animeImageCache', JSON.stringify({
-          images: readyCards.reduce((acc, card) => ({ ...acc, [card.rec.name]: card.imageUrl }), {}),
+          images: readyCards.reduce((acc, card) => ({ ...acc, [card.name]: card.url }), {}),
           timestamp: Date.now()
         }));
       } catch (err) {
@@ -95,70 +139,7 @@ const GenreRecommendationPage = ({ apiUrl }) => {
     }
   }, [readyCards]);
 
-  const fetchRecommendations = async () => {
-    setLoading(true);
-    setError(null);
-    setRecommendations({ popular: [], relevant: [] });
-    setReadyCards([]);
-    
-    try {
-      console.log('Fetching from:', `${apiUrl}/recommend/genre`);
-      console.log('Request body:', { genres, type_anime: typeAnime, top_n: topN });
-      
-      const response = await fetch(`${apiUrl}/recommend/genre`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ genres, type_anime: typeAnime, top_n: topN })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-      }
-      
-      const data = await response.json();
-      console.log('Raw API Response:', data); // Log the raw response
-      
-      // Handle different response formats
-      let processedData = {
-        popular: [],
-        relevant: []
-      };
-
-      if (Array.isArray(data)) {
-        // If response is an array, treat it as relevant recommendations
-        processedData.relevant = data;
-      } else if (typeof data === 'object') {
-        // If response is an object, try to extract popular and relevant
-        processedData = {
-          popular: Array.isArray(data.popular) ? data.popular : [],
-          relevant: Array.isArray(data.relevant) ? data.relevant : []
-        };
-      }
-
-      console.log('Processed recommendations:', processedData);
-      
-      if (processedData.popular.length > 0 || processedData.relevant.length > 0) {
-        setRecommendations(processedData);
-        const allRecs = [...processedData.popular, ...processedData.relevant];
-        // Don't set loading to false yet, wait for first batch of images
-        await fetchImages(allRecs);
-      } else {
-        setError('No recommendations found for these genres');
-        setLoading(false);
-      }
-    } catch (error) {
-      console.error('Fetch error:', error); // Add detailed error logging
-      setError('Error fetching recommendations: ' + error.message);
-      setLoading(false);
-    }
-  };
-
   const cleanAnimeName = (name) => {
-    // Remove special characters, extra spaces, and common suffixes
     return name
       .replace(/[:\-～!@#$%^&*()_+=]/g, ' ')
       .replace(/\s+/g, ' ')
@@ -179,10 +160,10 @@ const GenreRecommendationPage = ({ apiUrl }) => {
     }
 
     const searchVariations = [
-      animeName,                              // Original name
-      cleanAnimeName(animeName),              // Cleaned name
-      animeName.split(':')[0],                // First part before colon
-      cleanAnimeName(animeName).split(' ')[0] // First word of cleaned name
+      animeName,
+      cleanAnimeName(animeName),
+      animeName.split(':')[0],
+      cleanAnimeName(animeName).split(' ')[0]
     ];
 
     for (let variation of searchVariations) {
@@ -193,9 +174,9 @@ const GenreRecommendationPage = ({ apiUrl }) => {
           );
 
           if (!searchResponse.ok) {
-            if (searchResponse.status === 429) { // Rate limit hit
-              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-              continue; // Retry this variation
+            if (searchResponse.status === 429) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              continue;
             }
             throw new Error(`Search failed: ${searchResponse.status}`);
           }
@@ -203,7 +184,6 @@ const GenreRecommendationPage = ({ apiUrl }) => {
           const searchData = await searchResponse.json();
           const results = searchData.data || [];
 
-          // Try to find the best match
           const bestMatch = results.find(anime => {
             const cleanTitle = cleanAnimeName(anime.title).toLowerCase();
             const cleanSearchTitle = cleanAnimeName(variation).toLowerCase();
@@ -215,7 +195,6 @@ const GenreRecommendationPage = ({ apiUrl }) => {
           });
 
           if (bestMatch?.images?.jpg?.image_url) {
-            // Verify the image can be loaded
             const img = new Image();
             await new Promise((resolve, reject) => {
               img.onload = resolve;
@@ -226,22 +205,96 @@ const GenreRecommendationPage = ({ apiUrl }) => {
           }
         } catch (err) {
           console.error(`Attempt ${attempt + 1} failed for ${variation}:`, err);
-          if (attempt === retryCount - 1) continue; // Try next variation if all attempts fail
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait before retry
+          if (attempt === retryCount - 1) continue;
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
     }
     throw new Error('No matching image found');
   };
 
+  const handleGenreToggle = (genre) => {
+    setSelectedGenres(prev => 
+      prev.includes(genre)
+        ? prev.filter(g => g !== genre)
+        : [...prev, genre]
+    );
+  };
+
+  const fetchRecommendations = async () => {
+    if (selectedGenres.length === 0) {
+      setError('Please select at least one genre');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setRecommendations([]);
+    setReadyCards([]);
+    
+    try {
+      console.log('Fetching recommendations for genres:', selectedGenres);
+      
+      const response = await fetch(
+        `${apiUrl}/recommend/genre`,
+        {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            genres: selectedGenres,
+            type_anime: "all",
+            top_n: topN
+          })
+        }
+      );
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('API Response:', data);
+      
+      // Combine popular and relevant recommendations
+      const allRecommendations = [...(data.popular || []), ...(data.relevant || [])];
+      
+      if (allRecommendations.length > 0) {
+        // Filter by rating threshold and limit to topN
+        const filteredRecs = allRecommendations
+          .filter(rec => rec.rating >= ratingThreshold)
+          .slice(0, topN);
+        
+        if (filteredRecs.length > 0) {
+          setRecommendations(filteredRecs);
+          await fetchImages(filteredRecs);
+        } else {
+          setError('No recommendations found meeting the rating threshold');
+          setLoading(false);
+        }
+      } else if (data.message) {
+        setError(data.message);
+        setLoading(false);
+      } else {
+        setError('No recommendations found for these genres');
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+      setError('Error fetching recommendations: ' + error.message);
+      setLoading(false);
+    }
+  };
+
   const fetchImages = async (recs) => {
     const newReadyCards = [];
     
-    // Process recommendations in batches
     for (let i = 0; i < recs.length; i += BATCH_SIZE) {
       const batch = recs.slice(i, i + BATCH_SIZE);
       
-      // Fetch batch in parallel
       const batchPromises = batch.map(async (rec) => {
         try {
           const imageUrl = await fetchImageWithRetry(rec.name);
@@ -256,12 +309,10 @@ const GenreRecommendationPage = ({ apiUrl }) => {
 
       await Promise.all(batchPromises);
       
-      // After first batch is loaded, remove loading state
       if (i === 0) {
         setLoading(false);
       }
       
-      // Add delay between batches to respect rate limits
       if (i + BATCH_SIZE < recs.length) {
         await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
       }
@@ -269,114 +320,137 @@ const GenreRecommendationPage = ({ apiUrl }) => {
   };
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6 text-gray-900">Find Anime by Genre</h2>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <h2 className="text-3xl font-bold text-gray-900 mb-8">Find Anime by Genres</h2>
       
-      <div className="max-w-2xl space-y-4 mb-8">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Select Genres
-          </label>
-          <input
-            type="text"
-            value={genres.join(', ')}
-            onChange={(e) => setGenres(e.target.value.split(',').map(g => g.trim()))}
-            className="input-field"
-            placeholder="e.g. Action, Romance, Comedy"
-            disabled={loading}
-          />
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="max-w-2xl space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Type
+              Select Genres
             </label>
-            <select
-              value={typeAnime}
-              onChange={(e) => setTypeAnime(e.target.value)}
-              className="input-field"
-              disabled={loading}
-            >
-              <option value="all">All Types</option>
-              <option value="TV">TV</option>
-              <option value="Movie">Movie</option>
-              <option value="OVA">OVA</option>
-            </select>
+            <div className="flex flex-wrap gap-2">
+              {availableGenres.map(genre => (
+                <button
+                  key={genre}
+                  onClick={() => handleGenreToggle(genre)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
+                    selectedGenres.includes(genre)
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                  disabled={loading}
+                >
+                  {genre}
+                </button>
+              ))}
+            </div>
           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Number of Results
-            </label>
-            <input
-              type="number"
-              value={topN}
-              onChange={(e) => setTopN(Math.max(1, Math.min(20, parseInt(e.target.value))))}
-              min="1"
-              max="20"
-              className="input-field"
-              disabled={loading}
-            />
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Number of Results
+              </label>
+              <input
+                type="number"
+                value={topN}
+                onChange={(e) => setTopN(Math.max(1, Math.min(20, parseInt(e.target.value))))}
+                min="1"
+                max="20"
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
+                disabled={loading}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Minimum Rating
+              </label>
+              <input
+                type="number"
+                value={ratingThreshold}
+                onChange={(e) => setRatingThreshold(Math.max(0, Math.min(10, parseFloat(e.target.value))))}
+                min="0"
+                max="10"
+                step="0.1"
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
+                disabled={loading}
+              />
+            </div>
           </div>
-        </div>
 
-        <div>
-          <button
-            onClick={fetchRecommendations}
-            disabled={loading || genres.length === 0}
-            className={`submit-button ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            {loading ? 'Searching...' : 'Find Recommendations'}
-          </button>
+          <div>
+            <button
+              onClick={fetchRecommendations}
+              disabled={loading || selectedGenres.length === 0}
+              className={`w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-medium rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 ${
+                loading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Searching...
+                </span>
+              ) : (
+                'Find Recommendations'
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
       {error && (
-        <div className="error-message">{error}</div>
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-8 rounded-lg">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
       )}
 
       {loading && <LoadingSpinner />}
 
-      {!loading && (recommendations.popular.length > 0 || recommendations.relevant.length > 0) && (
-        <div className="space-y-8">
-          {recommendations.popular.length > 0 && (
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">Popular Recommendations</h3>
-              <div className="anime-grid">
-                {recommendations.popular.map((rec, index) => {
-                  const readyCard = readyCards.find(card => card.rec.name === rec.name);
-                  return readyCard ? (
-                    <AnimeCard key={index} rec={readyCard.rec} imageUrl={readyCard.imageUrl} />
-                  ) : (
-                    <LoadingCard key={index} />
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {recommendations.relevant.length > 0 && (
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">More Recommendations</h3>
-              <div className="anime-grid">
-                {recommendations.relevant.map((rec, index) => {
-                  const readyCard = readyCards.find(card => card.rec.name === rec.name);
-                  return readyCard ? (
-                    <AnimeCard key={index} rec={readyCard.rec} imageUrl={readyCard.imageUrl} />
-                  ) : (
-                    <LoadingCard key={index} />
-                  );
-                })}
-              </div>
-            </div>
-          )}
+      {!loading && recommendations.length > 0 && (
+        <div>
+          <h3 className="text-2xl font-semibold text-gray-900 mb-6">
+            Recommended Anime for {selectedGenres.join(', ')}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+            {recommendations.map((rec, index) => {
+              const readyCard = readyCards.find(card => card.rec.name === rec.name);
+              return readyCard ? (
+                <AnimeCard key={index} rec={readyCard.rec} imageUrl={readyCard.imageUrl} />
+              ) : (
+                <LoadingCard key={index} />
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {!loading && !error && recommendations.popular.length === 0 && recommendations.relevant.length === 0 && (
-        <div className="info-message">
-          Enter genres to find anime recommendations.
+      {!loading && !error && recommendations.length === 0 && (
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-blue-700">Select one or more genres to get anime recommendations.</p>
+            </div>
+          </div>
         </div>
       )}
     </div>

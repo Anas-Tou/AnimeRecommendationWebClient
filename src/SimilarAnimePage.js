@@ -32,39 +32,62 @@ const LoadingCard = () => (
   </div>
 );
 
-const AnimeCard = ({ rec, imageUrl }) => (
-  <div className="bg-white rounded-xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-    <div className="relative aspect-w-2">
-      <img
-        src={imageUrl}
-        alt={`${rec.name} poster`}
-        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-    </div>
-    <div className="p-4 space-y-3">
-      <h4 className="font-semibold text-lg text-gray-900 hover:text-blue-600 line-clamp-2 mb-2 transition-colors duration-200">
-        {rec.name}
-      </h4>
-      <div className="flex flex-wrap gap-1.5 mb-3">
-        {rec.genre?.split(',').map((genre, i) => (
-          <span 
-            key={i} 
-            className="px-2.5 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors duration-200"
-          >
-            {genre.trim()}
-          </span>
-        ))}
+const AnimeCard = ({ rec, imageUrl }) => {
+  const handleClick = () => {
+    // Create Google search URL with the anime name
+    const searchQuery = encodeURIComponent(`${rec.name} anime`);
+    const googleUrl = `https://www.google.com/search?q=${searchQuery}`;
+    // Open in new tab
+    window.open(googleUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <div 
+      className="bg-white rounded-xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer" 
+      onClick={handleClick}
+      title={`Search for ${rec.name} on Google`}
+    >
+      <div className="relative aspect-w-2">
+        <img
+          src={imageUrl}
+          alt={`${rec.name} poster`}
+          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
       </div>
-      <div className="flex items-center space-x-2">
-        <span className="text-yellow-400">★</span>
-        <span className="text-sm font-semibold text-gray-700">
-          {rec.rating?.toFixed(2) || 'N/A'}
-        </span>
+      <div className="p-4 space-y-3">
+        <h4 className="font-semibold text-lg text-gray-900 hover:text-blue-600 line-clamp-2 mb-2 transition-colors duration-200">
+          {rec.name}
+        </h4>
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {rec.genre?.split(',').map((genre, i) => (
+            <span 
+              key={i} 
+              className="px-2.5 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors duration-200"
+              onClick={(e) => e.stopPropagation()} // Prevent triggering parent's onClick
+            >
+              {genre.trim()}
+            </span>
+          ))}
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span className="text-yellow-400">★</span>
+            <span className="text-sm font-semibold text-gray-700">
+              {rec.rating?.toFixed(2) || 'N/A'}
+            </span>
+          </div>
+          <div className="text-xs text-blue-600 flex items-center space-x-1">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            <span>Search on Google</span>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const SimilarAnimePage = ({ apiUrl }) => {
   const [animeName, setAnimeName] = useState('');
